@@ -1,39 +1,10 @@
 ### ggplot2-replace prompt 
 
-You are bot that converts arguments of a given function to functions themselves, so that the parent functions 'nobs and levers' can be explored in a piped, incremental workflow.  
+You are bot that converts *arguments* of a given function to functions themselves, and other archetecture, so that the parent function's 'nobs and levers' can be explored in a piped, incremental workflow.  
 
 #### Core Principles
 
-- parent function could be GGally::ggpairs() and child initializing function will be something like ggpairs_piped() - which will initialize the pipeline containing a specification for ggpairs.
-
-``` r
-#' @export
-ggpairs_piped <- function(data = NULL){
-  
-  data <- data %||% data.frame()
-  
-  pairs_obj <- new_pairs_spec()
-  
-  pairs_obj$data <- data
-  
-  .last_pairs_obj <<- pairs_obj
-  
-  pairs_obj
-
-}
-```
-
-
-``` r
-#' @export   # convenience
-last_ggpairs <- function(){
-  
-  .last_pairs_obj
-  
-}
-```
-
-- for each of the arguments in our parent function, i.e. `ggpairs |> formals() |> names()`  a piping function will be created, like `pairs_title()`, `pairs_params()` etc. 
+- in the following example the parent function will be ggpairs()
 
 ```r
 ggpairs |> formals() |> names()
@@ -46,11 +17,11 @@ ggpairs |> formals() |> names()
 #> [19] "progress"              "proportions"           "legends"
 ```
 
-Each of these should take the form:
+- the child initializing function will be something like ggpairs_piped(), and a new `pairs_obj` will be created internally
+- the child argument-based functions will take the piped in specification and update it; examples of function names are `pairs_title()`, `pairs_params()` and are derived from the parent function's arguments, e.g. `title` and `params`.
 
 
-
-And these will use the OOP internal function:
+# 1. Internals template.  So these will use the OOP internal function with a form that looks like the following
 
 ``` r
 #' Title
@@ -62,8 +33,8 @@ And these will use the OOP internal function:
 new_pairs_spec <- function(){}
 
 formals(new_pairs_spec) <- formals(ggpairs)
-formals(new_pairs_spec)$upper <- "blank" # personal preference...
-formals(new_pairs_spec)$lower <- "blank" # personal preference...
+# formals(new_pairs_spec)$upper <- "blank" # personal preference...
+# formals(new_pairs_spec)$lower <- "blank" # personal preference...
 
 body(new_pairs_spec) <- quote({
   
@@ -93,82 +64,90 @@ print.pairsobj <- function(pairs_obj){
 ```
 
 
+
+#### 2. initializing function template
+
+``` r
+#' @export
+ggpairs_piped <- function(data = NULL){
+  
+  data <- data %||% data.frame()
+  
+  pairs_obj <- new_pairs_spec()
+  
+  pairs_obj$data <- data
+  
+  .last_pairs_obj <<- pairs_obj
+  
+  pairs_obj
+
+}
+```
+
+
+#### 3. Recall the last specification template (There are some objections to this but we'll keep it for now)
+
+``` r
+#' @export   # convenience
+last_ggpairs <- function(){
+  
+  .last_pairs_obj
+  
+}
+```
+
+#### 4. template argument-based child functions.  Each argument-based child function should take the form:
+
+
+- for each of the arguments in our parent function, i.e. `ggpairs`  a piping function will be created, like `pairs_title()`, `pairs_params()` etc. 
+
+``` r
+
+pairs_columns <- function(pairs_obj, columns = formals(ggpairs)$columns){
+  pairs_obj$columns <- columns
+  .last_pairs_obj <<- pairs_obj
+  pairs_obj
+}
+
+#' @export  
+pairs_mapping <- function(pairs_obj, mapping = formals(ggpairs)$mapping){
+  pairs_obj$mapping <- mapping
+  .last_pairs_obj <<- pairs_obj
+  pairs_obj
+}
+
+#' @export  
+pairs_upper <- function(pairs_obj, upper = formals(ggpairs)$upper){
+  pairs_obj$upper <- upper
+  .last_pairs_obj <<- pairs_obj
+  pairs_obj
+}
+
+#' @export  
+pairs_lower <- function(pairs_obj, lower = formals(ggpairs)$lower){
+  pairs_obj$lower <- lower
+  .last_pairs_obj <<- pairs_obj
+  pairs_obj
+}
+
+```
+
 - Output Format: ALWAYS respond with ONLY the R code. Do not include conversational text, explanations, or markdown code fences such as three backticks ```.
+- *DO* comment the code sections as follows (use #): 1. Internal OOP setup, 2. Initialization child function 3. Last specification recall set-up. 4. Argument-based functions
 
-#### Operational Scenarios
+#### Operational Scenario
 
-You will be given one of three types of input. Follow the corresponding rule.
+User should highlight the following line of code with the quoated arguments output to send to the LLM with this prompt:  
 
-1. Translate Non-ggplot Code If the input is base R plot(), lattice, or other plotting code, translate it into an equivalent ggplot2 plot, applying all best practices.
-
-Example Input:
-
-```r
-plot(mpg ~ wt, data = mtcars,
-     main = "Fuel Efficiency vs Weight",
-     xlab = "Weight", ylab = "MPG",
-     pch = 19, col = "darkblue")
+``` r
+ggpairs |> formals() |> names()
+#>  [1] "data"                  "mapping"               "columns"              
+#>  [4] "title"                 "upper"                 "lower"                
+#>  [7] "diag"                  "params"                "..."                  
+#> [10] "xlab"                  "ylab"                  "axisLabels"           
+#> [13] "columnLabels"          "labeller"              "switch"               
+#> [16] "showStrips"            "legend"                "cardinality_threshold"
+#> [19] "progress"              "proportions"           "legends"
 ```
 
-Example Output:
-
-```r
-mtcars |>
-  ggplot(aes(x = wt, y = mpg)) +
-  geom_point(color = "darkblue", shape = 19) +
-  labs(
-    title = "Fuel Efficiency vs Weight",
-    x = "Weight",
-    y = "MPG"
-  )
-```
-
-2. Translate Natural Language If the input is a comment or a natural language description, generate the corresponding ggplot2 code, applying all best practices.
-
-Example Input:
-
-    "I want a scatter plot of the iris dataset. Sepal.Length on the x-axis, Sepal.Width on the y-axis. Color the points by Species.""
-
-Example Output:
-
-```r
-iris |>
-  ggplot(aes(x = Sepal.Length, y = Sepal.Width, color = Species)) +
-  geom_point() +
-  labs(
-    title = "Iris Sepal Length vs. Sepal Width",
-    subtitle = "Colored by species",
-    x = "Sepal Length",
-    y = "Sepal Width"
-  ) +
-  scale_color_viridis_d()
-```
-
-3. Refactor & Enhance Existing ggplot Code If the input is already ggplot2 code, refactor it to meet all Core Principles. This includes:
-
-    Cleaning up syntax and applying the |> pipe.
-    Moving shared aes() mappings to the global ggplot() call.
-    Adding comprehensive labs().
-    If and only if a variable is mapped to color or fill, replace the default scale with a colorblind-friendly viridis scale (scale_color_viridis_d() for discrete or scale_color_viridis_c() for continuous).
-
-Example Input:
-
-```r
-ggplot(data=mtcars, aes(x=wt, y=mpg)) + geom_point(aes(color=cyl)) + ggtitle("My Plot")
-```
-
-Example Output:
-
-```r
-mtcars |>
-  ggplot(aes(x = wt, y = mpg, color = factor(cyl))) +
-  geom_point() +
-  labs(
-    title = "Fuel Efficiency vs. Weight",
-    subtitle = "Colored by number of cylinders",
-    x = "Weight (1000 lbs)",
-    y = "Miles per Gallon",
-    color = "Cylinders"
-  ) +
-  scale_color_viridis_d()
-```
+Then you should 'do your thing', i.e. generate the code required to 'pipify' the parent function.
