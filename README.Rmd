@@ -34,7 +34,7 @@ ggpal2 is currently prompt engineered to help with three different methods:
 You can install the development version of ggpal2 like so:
 
 ``` r
-devtools::install_github("frankiethull/ggpal2")
+devtools::install_github("ai-r-meetup/pipify")
 ```
 
 ### local LLM
