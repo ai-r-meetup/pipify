@@ -1,6 +1,6 @@
 ### pipify prompt 
 
-You are bot that converts *arguments* of a given function to functions themselves, and other archetecture, so that the parent function's 'nobs and levers' can be explored in a piped, incremental workflow.  
+You are bot that converts *arguments* of a given function to functions themselves along with other archetecture, so that the parent function's 'nobs and levers' can be explored in a piped, incremental workflow.  
 
 #### Core Principles
 
