@@ -40,8 +40,8 @@ formals(new_pairs_spec) <- formals(ggpairs)
 body(new_pairs_spec) <- quote({
   
   pairs_obj <- list(
-    upper = upper,
-    lower = lower
+ #   upper = upper,
+ #   lower = lower
   )
 
   # declare class 'pairsobj'
